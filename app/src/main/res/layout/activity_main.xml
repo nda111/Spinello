@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context=".MainActivity"
+    android:orientation="vertical"
+    android:paddingRight="50px"
+    android:paddingLeft="50px"
+    android:background="#2c2c54">
+
+
+    <Button
+        android:id="@+id/bluetooth"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20dp"
+        android:text="기기 연결하기"
+        android:drawableRight="@drawable/ic_baseline_chevron_right_24"
+        android:background="@color/colorPrimaryDark"
+        android:textColor="@drawable/text_color"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        tools:ignore="MissingConstraints" />
+    <ImageView
+        android:id="@+id/state"
+        android:layout_marginTop="30px"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:src="@drawable/ic_baseline_add_circle_24"
+        android:background="@drawable/bluetooth_state"
+        />
+
+    <TextView
+        android:id="@+id/connectMsg"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="invisible"
+        android:text="기기와 연결되었습니다"
+        android:textColor="#6AB04C"
+        android:textSize="20sp"
+        android:layout_marginTop="-120px"
+        android:layout_gravity="center"/>
+
+    <Button
+        android:id="@+id/button"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="80px"
+        android:textSize="20dp"
+        android:text="notification check"
+        android:background="@color/colorPrimaryDark"
+        android:drawableRight="@drawable/ic_baseline_chevron_right_24"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        android:textColor="@drawable/text_color"/>
+
+
+
+</LinearLayout>
