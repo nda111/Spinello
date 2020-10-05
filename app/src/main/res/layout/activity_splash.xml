@@ -19,7 +19,7 @@
             android:layout_height="500px"
             android:layout_gravity="center"
             app:lottie_autoPlay="true"
-            app:lottie_fileName="loading-human-fast.json"
+            app:lottie_fileName="loading-fast.json"
             app:lottie_loop="false"
             tools:ignore="MissingConstraints" />
 

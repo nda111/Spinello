@@ -9,7 +9,7 @@
     android:orientation="vertical"
     android:paddingRight="50px"
     android:paddingLeft="50px"
-    android:background="#2c2c54">
+    android:background="#2c2c54">//#322A94 더 밝은 색
 
 
     <Button
@@ -40,7 +40,7 @@
         android:text="기기와 연결되었습니다"
         android:textColor="#6AB04C"
         android:textSize="20sp"
-        android:layout_marginTop="-120px"
+        android:layout_marginTop="-130px"
         android:layout_gravity="center"/>
 
     <Button
