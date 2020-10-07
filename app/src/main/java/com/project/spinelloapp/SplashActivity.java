@@ -15,6 +15,7 @@ public class SplashActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash);
 
+
         final LottieAnimationView animationView = (LottieAnimationView) findViewById(R.id.animation_view);
         animationView.addAnimatorListener(new Animator.AnimatorListener() {
             @Override
@@ -24,7 +25,7 @@ public class SplashActivity extends Activity {
 
             @Override
             public void onAnimationEnd(Animator animation) {
-                Intent intent = new Intent(getApplicationContext(), MainActivity.class);
+                Intent intent = new Intent(getApplicationContext(), LoginActivity.class);
                 startActivity(intent);
                 finish();
             }

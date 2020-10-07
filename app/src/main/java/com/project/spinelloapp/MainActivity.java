@@ -48,6 +48,7 @@ public class MainActivity extends AppCompatActivity {
         filter3.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
         registerReceiver(mBroadcastReceiver3, filter3);
 
+
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View arg0) {
@@ -66,25 +67,6 @@ public class MainActivity extends AppCompatActivity {
         });
 
 }
-
-    private void bluetoothCheck() {
-
-        // 지원하지 않는다면 어플을 종료시킨다.
-        if (mBluetoothAdapter == null) {
-            Toast.makeText(this, "이 기기는 블루투스 기능을 지원하지 않습니다.", Toast.LENGTH_SHORT).show();
-            finish();
-            return;
-        } else {
-            if (!mBluetoothAdapter.isEnabled()) {
-                // 블루투스를 지원하지만 비활성 상태인 경우
-                // 블루투스를 활성 상태로 바꾸기 위해 사용자 동의 요첨
-                Intent enableBtIntent = new Intent( BluetoothAdapter.ACTION_REQUEST_ENABLE);
-                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-
-            }
-        }
-    }
-
     private final BroadcastReceiver mBroadcastReceiver3 = new BroadcastReceiver() {
 
         @Override
@@ -105,6 +87,23 @@ public class MainActivity extends AppCompatActivity {
             }
         }
     };
+    private void bluetoothCheck() {
+
+        // 지원하지 않는다면 어플을 종료시킨다.
+        if (mBluetoothAdapter == null) {
+            Toast.makeText(this, "이 기기는 블루투스 기능을 지원하지 않습니다.", Toast.LENGTH_SHORT).show();
+            finish();
+            return;
+        } else {
+            if (!mBluetoothAdapter.isEnabled()) {
+                // 블루투스를 지원하지만 비활성 상태인 경우
+                // 블루투스를 활성 상태로 바꾸기 위해 사용자 동의 요첨
+                Intent enableBtIntent = new Intent( BluetoothAdapter.ACTION_REQUEST_ENABLE);
+                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+
+            }
+        }
+}
 
     public void NotificationSomethings() {
 
