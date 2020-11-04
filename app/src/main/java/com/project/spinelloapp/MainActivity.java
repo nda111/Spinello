@@ -9,9 +9,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
 import android.os.Build;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -24,6 +26,12 @@ import android.widget.Toast;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+import java.net.UnknownHostException;
+
 public class MainActivity extends AppCompatActivity {
 
     public static final String NOTIFICATION_CHANNEL_ID = "10001";
@@ -32,6 +40,9 @@ public class MainActivity extends AppCompatActivity {
     private static final int REQUEST_ENABLE_BT = 3;
     ImageView bluetooth_state;
     TextView connectMsg;
+    ImageView connectState;
+    TextView serverMsg;
+    TextView serverConnected;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -40,14 +51,26 @@ public class MainActivity extends AppCompatActivity {
 
         Button button = (Button) findViewById(R.id.button);
         Button bluetooth = (Button) findViewById(R.id.bluetooth);
+        Button server = (Button)findViewById(R.id.serverCheck);
         bluetooth_state = (ImageView) findViewById(R.id.state);
         connectMsg = (TextView)findViewById(R.id.connectMsg);
+
+        connectState = (ImageView)findViewById(R.id.connectState);
+        serverMsg = (TextView) findViewById(R.id.serverMsg);
+        serverConnected = (TextView) findViewById(R.id.serverConnected);
 
         IntentFilter filter3 = new IntentFilter();
         filter3.addAction(BluetoothDevice.ACTION_ACL_CONNECTED);
         filter3.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
         registerReceiver(mBroadcastReceiver3, filter3);
 
+        server.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                ConnectThread thread = new ConnectThread();
+                thread.start();
+            }
+        });
 
         button.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -66,7 +89,7 @@ public class MainActivity extends AppCompatActivity {
 
         });
 
-}
+    }
     private final BroadcastReceiver mBroadcastReceiver3 = new BroadcastReceiver() {
 
         @Override
@@ -100,10 +123,9 @@ public class MainActivity extends AppCompatActivity {
                 // 블루투스를 활성 상태로 바꾸기 위해 사용자 동의 요첨
                 Intent enableBtIntent = new Intent( BluetoothAdapter.ACTION_REQUEST_ENABLE);
                 startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-
             }
         }
-}
+    }
 
     public void NotificationSomethings() {
 
@@ -169,5 +191,42 @@ public class MainActivity extends AppCompatActivity {
         super.onDestroy();
 
         unregisterReceiver(mBroadcastReceiver3);
+    }
+    class ConnectThread  extends Thread{
+        SharedPreferences pref = getSharedPreferences("IP", 0);
+        public void run(){
+            String host =pref.getString("IP", String.valueOf(0)).toString();
+            Log.d("host",host);
+
+            int port = 5555;
+            try {
+
+                Socket socket = new Socket(host, port);
+                connectState.setBackgroundResource(R.drawable.bluetooth_state_connected);
+                serverMsg.setVisibility(View.INVISIBLE);
+                serverConnected.setVisibility(View.VISIBLE);
+
+                ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
+                outputStream.flush();
+
+                ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
+                Object input = inputStream.readObject();
+
+                //서버로 부터 자세교정알림을 받은 경우
+                if(input.equals("notifications")){
+                    NotificationSomethings();
+                }
+                inputStream.close();
+                outputStream.close();
+                socket.close();
+
+            } catch (UnknownHostException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            } catch (ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }

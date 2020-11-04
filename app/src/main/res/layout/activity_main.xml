@@ -44,10 +44,52 @@
         android:layout_gravity="center"/>
 
     <Button
+        android:id="@+id/serverCheck"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textSize="20dp"
+        android:text="Server"
+        android:layout_marginTop="100px"
+        android:drawableRight="@drawable/ic_baseline_chevron_right_24"
+        android:background="@color/colorPrimaryDark"
+        android:textColor="@drawable/text_color"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        tools:ignore="MissingConstraints" />
+
+    <ImageView
+        android:id="@+id/connectState"
+        android:layout_marginTop="30px"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bluetooth_state"
+        />
+
+    <TextView
+        android:id="@+id/serverMsg"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Connecting..."
+        android:textColor="@drawable/text_color"
+        android:textSize="20sp"
+        android:layout_marginTop="-180px"
+        android:layout_gravity="center"/>
+
+    <TextView
+        android:id="@+id/serverConnected"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="visible"
+        android:text="Connected!"
+        android:textColor="#6AB04C"
+        android:textSize="20sp"
+        android:layout_marginTop="-70px"
+        android:layout_gravity="center"/>
+
+    <Button
         android:id="@+id/button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="80px"
+        android:layout_marginTop="150px"
         android:textSize="20dp"
         android:text="notification check"
         android:background="@color/colorPrimaryDark"
