@@ -1,18 +1,25 @@
 package com.project.spinelloapp;
 
+import android.app.AlertDialog;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
+import android.bluetooth.BluetoothServerSocket;
+import android.bluetooth.BluetoothSocket;
 import android.content.BroadcastReceiver;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.graphics.BitmapFactory;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -27,10 +34,16 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.NotificationCompat;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.net.SocketAddress;
 import java.net.UnknownHostException;
+import java.util.Set;
+import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -64,6 +77,7 @@ public class MainActivity extends AppCompatActivity {
         filter3.addAction(BluetoothDevice.ACTION_ACL_DISCONNECTED);
         registerReceiver(mBroadcastReceiver3, filter3);
 
+
         server.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
@@ -76,7 +90,6 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View arg0) {
                 // 버튼을 누를때마다 count 를 증가시며 최근에 보낸 노티피케이션만 사용자의 탭 대기중인지 테스트
-                count++;
                 NotificationSomethings();
             }
         });
@@ -192,6 +205,107 @@ public class MainActivity extends AppCompatActivity {
 
         unregisterReceiver(mBroadcastReceiver3);
     }
+    ////////////////////////////////////BT//////////////////////////////////////
+
+    public static class MyBluetoothService {
+        private static final String TAG = "MY_APP_DEBUG_TAG";
+        private Handler handler; // handler that gets info from Bluetooth service
+
+        // Defines several constants used when transmitting messages between the
+        // service and the UI.
+        private interface MessageConstants {
+            public static final int MESSAGE_READ = 0;
+            public static final int MESSAGE_WRITE = 1;
+            public static final int MESSAGE_TOAST = 2;
+
+            // ... (Add other message types here as needed.)
+        }
+
+        private class ConnectedThread extends Thread {
+            private final BluetoothSocket mmSocket;
+            private final InputStream mmInStream;
+            private final OutputStream mmOutStream;
+            private byte[] mmBuffer; // mmBuffer store for the stream
+
+            public ConnectedThread(BluetoothSocket socket) {
+                mmSocket = socket;
+                InputStream tmpIn = null;
+                OutputStream tmpOut = null;
+
+                // Get the input and output streams; using temp objects because
+                // member streams are final.
+                try {
+                    tmpIn = socket.getInputStream();
+                } catch (IOException e) {
+                    Log.e(TAG, "Error occurred when creating input stream", e);
+                }
+                try {
+                    tmpOut = socket.getOutputStream();
+                } catch (IOException e) {
+                    Log.e(TAG, "Error occurred when creating output stream", e);
+                }
+
+                mmInStream = tmpIn;
+                mmOutStream = tmpOut;
+            }
+
+            public void run() {
+                mmBuffer = new byte[1024];
+                int numBytes; // bytes returned from read()
+
+                // Keep listening to the InputStream until an exception occurs.
+                while (true) {
+                    try {
+                        // Read from the InputStream.
+                        numBytes = mmInStream.read(mmBuffer);
+                        // Send the obtained bytes to the UI activity.
+                        Message readMsg = handler.obtainMessage(
+                                MessageConstants.MESSAGE_READ, numBytes, -1,
+                                mmBuffer);
+                        readMsg.sendToTarget();
+                    } catch (IOException e) {
+                        Log.d(TAG, "Input stream was disconnected", e);
+                        break;
+                    }
+                }
+            }
+
+            // Call this from the main activity to send data to the remote device.
+            public void write(byte[] bytes) {
+                try {
+                    mmOutStream.write(bytes);
+
+                    // Share the sent message with the UI activity.
+                    Message writtenMsg = handler.obtainMessage(
+                            MessageConstants.MESSAGE_WRITE, -1, -1, mmBuffer);
+                    writtenMsg.sendToTarget();
+                } catch (IOException e) {
+                    Log.e(TAG, "Error occurred when sending data", e);
+
+                    // Send a failure message back to the activity.
+                    Message writeErrorMsg =
+                            handler.obtainMessage(MessageConstants.MESSAGE_TOAST);
+                    Bundle bundle = new Bundle();
+                    bundle.putString("toast",
+                            "Couldn't send data to the other device");
+                    writeErrorMsg.setData(bundle);
+                    handler.sendMessage(writeErrorMsg);
+                }
+            }
+
+            // Call this method from the main activity to shut down the connection.
+            public void cancel() {
+                try {
+                    mmSocket.close();
+                } catch (IOException e) {
+                    Log.e(TAG, "Could not close the connect socket", e);
+                }
+            }
+        }
+    }
+
+
+    ///////////////////////////////////SERVER///////////////////////////////////
     class ConnectThread  extends Thread{
         SharedPreferences pref = getSharedPreferences("IP", 0);
         public void run(){
@@ -199,6 +313,7 @@ public class MainActivity extends AppCompatActivity {
             Log.d("host",host);
 
             int port = 5555;
+
             try {
 
                 Socket socket = new Socket(host, port);
@@ -206,25 +321,36 @@ public class MainActivity extends AppCompatActivity {
                 serverMsg.setVisibility(View.INVISIBLE);
                 serverConnected.setVisibility(View.VISIBLE);
 
+                SocketAddress socketAddress = new InetSocketAddress(host,port);
+
                 ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
+                float[] coords = new float[6]; //xyz 2
+                // TODO: coords 대신에 라즈베리파이에서 가져온 좌표 쓰기
+                for (int i = 0; i < 6; i++) {
+
+                    outputStream.writeFloat(coords[i]);
+                }
                 outputStream.flush();
 
                 ObjectInputStream inputStream = new ObjectInputStream(socket.getInputStream());
-                Object input = inputStream.readObject();
+                float[] recCoords = new float[12];
+                for (int i = 0; i < recCoords.length; i++) {
 
-                //서버로 부터 자세교정알림을 받은 경우
-                if(input.equals("notifications")){
-                    NotificationSomethings();
+
+
+                    recCoords[i] = inputStream.readFloat();
                 }
+                // TODO: 받아온 좌표 처리하기?
+
                 inputStream.close();
                 outputStream.close();
-                socket.close();
+//                socket.close();
+                socket.connect(socketAddress,100); //delay 설정.
+
 
             } catch (UnknownHostException e) {
                 e.printStackTrace();
             } catch (IOException e) {
-                e.printStackTrace();
-            } catch (ClassNotFoundException e) {
                 e.printStackTrace();
             }
         }
