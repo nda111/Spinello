@@ -20,6 +20,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.os.MessageQueue;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -38,6 +39,7 @@ import java.io.InputStream;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.OutputStream;
+import java.net.ConnectException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.net.SocketAddress;
@@ -89,8 +91,7 @@ public class MainActivity extends AppCompatActivity {
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View arg0) {
-                // 버튼을 누를때마다 count 를 증가시며 최근에 보낸 노티피케이션만 사용자의 탭 대기중인지 테스트
-                NotificationSomethings();
+                NotificationSomethings(); // 알림 보내기.
             }
         });
         mBluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -103,19 +104,22 @@ public class MainActivity extends AppCompatActivity {
         });
 
     }
-    private final BroadcastReceiver mBroadcastReceiver3 = new BroadcastReceiver() {
 
+    private final BroadcastReceiver mBroadcastReceiver3 = new BroadcastReceiver() {
+        //블루투스 연결 상태에 따라 UI 변경
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
 
             switch (action){
                 case BluetoothDevice.ACTION_ACL_CONNECTED:
+                    //블루투스가 연결되어 있을 경우
                     bluetooth_state.setImageResource(R.drawable.ic_baseline_check_circle_24);
                     bluetooth_state.setBackgroundResource(R.drawable.bluetooth_state_connected);
                     connectMsg.setVisibility(View.VISIBLE);
                     break;
                 case BluetoothDevice.ACTION_ACL_DISCONNECTED:
+                    //블루투스가 연결되어 있지 않은 경우
                     bluetooth_state.setImageResource(R.drawable.ic_baseline_add_circle_24);
                     bluetooth_state.setBackgroundResource(R.drawable.bluetooth_state);
                     connectMsg.setVisibility(View.INVISIBLE);
@@ -125,7 +129,7 @@ public class MainActivity extends AppCompatActivity {
     };
     private void bluetoothCheck() {
 
-        // 지원하지 않는다면 어플을 종료시킨다.
+        // 블루투스를 지원하지 않는다면 어플을 종료시킨다.
         if (mBluetoothAdapter == null) {
             Toast.makeText(this, "이 기기는 블루투스 기능을 지원하지 않습니다.", Toast.LENGTH_SHORT).show();
             finish();
@@ -136,7 +140,23 @@ public class MainActivity extends AppCompatActivity {
                 // 블루투스를 활성 상태로 바꾸기 위해 사용자 동의 요첨
                 Intent enableBtIntent = new Intent( BluetoothAdapter.ACTION_REQUEST_ENABLE);
                 startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
+            }else if(mBluetoothAdapter.isEnabled()){
+                AcceptThread BTthread = new AcceptThread();
+                BTthread.start();
             }
+        }
+    }
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        switch (requestCode) {
+            case 5:
+                //블루투스 활성화
+                if (resultCode == RESULT_OK) {
+                    AcceptThread BTthread = new AcceptThread();
+                    BTthread.start();
+                } else if (resultCode == RESULT_CANCELED) {
+
+                }
         }
     }
 
@@ -183,6 +203,7 @@ public class MainActivity extends AppCompatActivity {
     }
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
+        //설정 메뉴 만들기
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.menu, menu);
         return true;
@@ -190,6 +211,7 @@ public class MainActivity extends AppCompatActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
+            //설정 값 저장하기
             case R.id.settings:
                 Intent intent = new Intent(MainActivity.this,SettingActivity.class);
                 startActivity(intent);
@@ -205,109 +227,142 @@ public class MainActivity extends AppCompatActivity {
 
         unregisterReceiver(mBroadcastReceiver3);
     }
-    ////////////////////////////////////BT//////////////////////////////////////
+    ////////////////////////////////////BT연결소켓생성하기 (SERVER)//////////////////////////////////////
 
-    public static class MyBluetoothService {
-        private static final String TAG = "MY_APP_DEBUG_TAG";
-        private Handler handler; // handler that gets info from Bluetooth service
+    private class AcceptThread extends Thread {
+        private final BluetoothServerSocket mmServerSocket;
 
-        // Defines several constants used when transmitting messages between the
-        // service and the UI.
-        private interface MessageConstants {
-            public static final int MESSAGE_READ = 0;
-            public static final int MESSAGE_WRITE = 1;
-            public static final int MESSAGE_TOAST = 2;
+        public AcceptThread() {
+            // Use a temporary object that is later assigned to mmServerSocket
+            // because mmServerSocket is final.
+            BluetoothServerSocket tmp = null;
+            try {
 
-            // ... (Add other message types here as needed.)
+                // MY_UUID is the app's UUID string, also used by the client code.
+                //TODO: 라즈베리파이의 UUID를 입력
+                UUID MY_UUID = null;
+                String NAME = "";
+
+                tmp = mBluetoothAdapter.listenUsingRfcommWithServiceRecord(NAME, MY_UUID);
+            } catch (IOException e) {
+                Log.e("TAG", "Socket's listen() method failed", e);
+            }
+            mmServerSocket = tmp;
         }
 
-        private class ConnectedThread extends Thread {
-            private final BluetoothSocket mmSocket;
-            private final InputStream mmInStream;
-            private final OutputStream mmOutStream;
-            private byte[] mmBuffer; // mmBuffer store for the stream
-
-            public ConnectedThread(BluetoothSocket socket) {
-                mmSocket = socket;
-                InputStream tmpIn = null;
-                OutputStream tmpOut = null;
-
-                // Get the input and output streams; using temp objects because
-                // member streams are final.
+        public void run() {
+            BluetoothSocket socket = null;
+            // Keep listening until exception occurs or a socket is returned.
+            while (true) {
                 try {
-                    tmpIn = socket.getInputStream();
+                    socket = mmServerSocket.accept();
                 } catch (IOException e) {
-                    Log.e(TAG, "Error occurred when creating input stream", e);
-                }
-                try {
-                    tmpOut = socket.getOutputStream();
-                } catch (IOException e) {
-                    Log.e(TAG, "Error occurred when creating output stream", e);
+                    Log.e("TAG", "Socket's accept() method failed", e);
+                    break;
                 }
 
-                mmInStream = tmpIn;
-                mmOutStream = tmpOut;
-            }
+                if (socket != null) {
 
-            public void run() {
-                mmBuffer = new byte[1024];
-                int numBytes; // bytes returned from read()
+                    ConnectedThread connectedThread = new ConnectedThread(socket);
+                    connectedThread.start();
 
-                // Keep listening to the InputStream until an exception occurs.
-                while (true) {
                     try {
-                        // Read from the InputStream.
-                        numBytes = mmInStream.read(mmBuffer);
-                        // Send the obtained bytes to the UI activity.
-                        Message readMsg = handler.obtainMessage(
-                                MessageConstants.MESSAGE_READ, numBytes, -1,
-                                mmBuffer);
-                        readMsg.sendToTarget();
+                        mmServerSocket.close();
                     } catch (IOException e) {
-                        Log.d(TAG, "Input stream was disconnected", e);
-                        break;
+                        e.printStackTrace();
                     }
+                    break;
                 }
             }
+        }
 
-            // Call this from the main activity to send data to the remote device.
-            public void write(byte[] bytes) {
+        // Closes the connect socket and causes the thread to finish.
+        public void cancel() {
+            try {
+                mmServerSocket.close();
+            } catch (IOException e) {
+                Log.e("TAG", "Could not close the connect socket", e);
+            }
+        }
+
+
+    }
+
+    private class ConnectedThread extends Thread{
+
+        private final BluetoothSocket mmSocket;
+        private final InputStream mmInStream;
+        private final OutputStream mmOutStream;
+        private byte[] mmBuffer; // mmBuffer store for the stream
+
+
+        public ConnectedThread(BluetoothSocket socket) {
+
+            mmSocket = socket;
+            InputStream tmpIn = null;
+            OutputStream tmpOut = null;
+
+            // Get the input and output streams; using temp objects because
+            // member streams are final.
                 try {
-                    mmOutStream.write(bytes);
-
-                    // Share the sent message with the UI activity.
-                    Message writtenMsg = handler.obtainMessage(
-                            MessageConstants.MESSAGE_WRITE, -1, -1, mmBuffer);
-                    writtenMsg.sendToTarget();
-                } catch (IOException e) {
-                    Log.e(TAG, "Error occurred when sending data", e);
-
-                    // Send a failure message back to the activity.
-                    Message writeErrorMsg =
-                            handler.obtainMessage(MessageConstants.MESSAGE_TOAST);
-                    Bundle bundle = new Bundle();
-                    bundle.putString("toast",
-                            "Couldn't send data to the other device");
-                    writeErrorMsg.setData(bundle);
-                    handler.sendMessage(writeErrorMsg);
-                }
+                tmpIn = socket.getInputStream();
+            } catch (IOException e) {
+                Log.e("TAG", "Error occurred when creating input stream", e);
             }
-
-            // Call this method from the main activity to shut down the connection.
-            public void cancel() {
                 try {
-                    mmSocket.close();
+                tmpOut = socket.getOutputStream();
+            } catch (IOException e) {
+                Log.e("TAG", "Error occurred when creating output stream", e);
+            }
+
+            mmInStream = tmpIn;
+            mmOutStream = tmpOut;
+        }
+
+        public void run() {
+            mmBuffer = new byte[1024];
+            int numBytes; // bytes returned from read()
+
+            // Keep listening to the InputStream until an exception occurs.
+            while (true) {
+                try {
+                    // 라즈베리파이로부터 읽어온 데이터
+                    numBytes = mmInStream.read(mmBuffer);
+                    //TODO:라즈베리로부터 받아온 데이터 서버에 전송하기.
+
                 } catch (IOException e) {
-                    Log.e(TAG, "Could not close the connect socket", e);
+                    Log.d("TAG", "Input stream was disconnected", e);
+                    break;
                 }
             }
+    }
+
+    // Call this from the main activity to send data to the remote device.
+    public void write(byte[] bytes) {
+        try {
+            //라즈베리파이에 입력하는 데이터
+            mmOutStream.write(bytes);
+
+        } catch (IOException e) {
+            Log.e("TAG", "Error occurred when sending data", e);
         }
     }
+
+    // Call this method from the main activity to shut down the connection.
+    public void cancel() {
+        try {
+            mmSocket.close();
+        } catch (IOException e) {
+            Log.e("TAG", "Could not close the connect socket", e);
+        }
+    }
+}
 
 
     ///////////////////////////////////SERVER///////////////////////////////////
     class ConnectThread  extends Thread{
         SharedPreferences pref = getSharedPreferences("IP", 0);
+
         public void run(){
             String host =pref.getString("IP", String.valueOf(0)).toString();
             Log.d("host",host);
