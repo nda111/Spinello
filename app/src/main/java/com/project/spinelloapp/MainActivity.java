@@ -58,6 +58,7 @@ public class MainActivity extends AppCompatActivity {
     ImageView connectState;
     TextView serverMsg;
     TextView serverConnected;
+    byte[] coords = new byte[1024];
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -321,19 +322,18 @@ public class MainActivity extends AppCompatActivity {
 
         public void run() {
             mmBuffer = new byte[1024];
-            int numBytes; // bytes returned from read()
+//            int numBytes; // bytes returned from read()
 
             // Keep listening to the InputStream until an exception occurs.
             while (true) {
-                try {
-                    // 라즈베리파이로부터 읽어온 데이터
-                    numBytes = mmInStream.read(mmBuffer);
-                    //TODO:라즈베리로부터 받아온 데이터 서버에 전송하기.
-
-                } catch (IOException e) {
-                    Log.d("TAG", "Input stream was disconnected", e);
-                    break;
+                //                    // 라즈베리파이로부터 읽어온 데이터
+//                    numBytes = mmInStream.read(mmBuffer);
+                //TODO:라즈베리로부터 받아온 데이터 서버에 전송하기.
+                for(int i=0;i<1024;i++) {
+                    coords[i] = mmBuffer[i];
                 }
+
+
             }
     }
 
@@ -379,11 +379,11 @@ public class MainActivity extends AppCompatActivity {
                 SocketAddress socketAddress = new InetSocketAddress(host,port);
 
                 ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
-                float[] coords = new float[6]; //xyz 2
+//                float[] coords = new float[6]; //xyz 2
                 // TODO: coords 대신에 라즈베리파이에서 가져온 좌표 쓰기
-                for (int i = 0; i < 6; i++) {
+                for (int i = 0; i < 1024; i++) {
 
-                    outputStream.writeFloat(coords[i]);
+                    outputStream.writeByte(coords[i]); //라즈베리로부터 받아온 byte 그대로 넘김.
                 }
                 outputStream.flush();
 
