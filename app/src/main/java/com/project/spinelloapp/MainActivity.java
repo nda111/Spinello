@@ -107,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private final BroadcastReceiver mBroadcastReceiver3 = new BroadcastReceiver() {
-        //블루투스 연결 상태에 따라 UI 변경
+        //블루투스 연결 상태에 따라 UI 변경 //TODO: 라즈베리파이와 연결되었을때 UI가 변경되도록 설정하기.
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
@@ -141,9 +141,9 @@ public class MainActivity extends AppCompatActivity {
                 // 블루투스를 활성 상태로 바꾸기 위해 사용자 동의 요첨
                 Intent enableBtIntent = new Intent( BluetoothAdapter.ACTION_REQUEST_ENABLE);
                 startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
-            }else if(mBluetoothAdapter.isEnabled()){
+            }else if(mBluetoothAdapter.isEnabled()){ //블루투스를 지원하고 현재, 사용가능한 경우
                 AcceptThread BTthread = new AcceptThread();
-                BTthread.start();
+                BTthread.start(); //블루투스 소켓 생성 쓰레드 실행
             }
         }
     }
@@ -228,7 +228,7 @@ public class MainActivity extends AppCompatActivity {
 
         unregisterReceiver(mBroadcastReceiver3);
     }
-    ////////////////////////////////////BT연결소켓생성하기 (SERVER)//////////////////////////////////////
+    ////////////////////////////////////블루투스 연결 소켓 생성하기 (SERVER)//////////////////////////////////////
 
     private class AcceptThread extends Thread {
         private final BluetoothServerSocket mmServerSocket;
@@ -240,11 +240,13 @@ public class MainActivity extends AppCompatActivity {
             try {
 
                 // MY_UUID is the app's UUID string, also used by the client code.
-                //TODO: 라즈베리파이의 UUID를 입력
-                UUID MY_UUID = null;
-                String NAME = "";
 
-                tmp = mBluetoothAdapter.listenUsingRfcommWithServiceRecord(NAME, MY_UUID);
+                UUID MY_UUID = UUID.fromString(""); //TODO: 라즈베리파이의 UUID를 입력
+                String NAME = "rasberry";
+
+                tmp = mBluetoothAdapter.listenUsingRfcommWithServiceRecord(NAME, MY_UUID); //라즈베리파이의 uuid를 입력하면 블루투스 연결 소켓을 생성할 수 있음.
+
+
             } catch (IOException e) {
                 Log.e("TAG", "Socket's listen() method failed", e);
             }
@@ -257,6 +259,13 @@ public class MainActivity extends AppCompatActivity {
             while (true) {
                 try {
                     socket = mmServerSocket.accept();
+
+
+                    bluetooth_state.setImageResource(R.drawable.ic_baseline_check_circle_24);
+                    bluetooth_state.setBackgroundResource(R.drawable.bluetooth_state_connected);
+                    connectMsg.setVisibility(View.VISIBLE);
+
+
                 } catch (IOException e) {
                     Log.e("TAG", "Socket's accept() method failed", e);
                     break;
@@ -305,12 +314,12 @@ public class MainActivity extends AppCompatActivity {
 
             // Get the input and output streams; using temp objects because
             // member streams are final.
-                try {
+            try {
                 tmpIn = socket.getInputStream();
             } catch (IOException e) {
                 Log.e("TAG", "Error occurred when creating input stream", e);
             }
-                try {
+            try {
                 tmpOut = socket.getOutputStream();
             } catch (IOException e) {
                 Log.e("TAG", "Error occurred when creating output stream", e);
@@ -328,35 +337,34 @@ public class MainActivity extends AppCompatActivity {
             while (true) {
                 //                    // 라즈베리파이로부터 읽어온 데이터
 //                    numBytes = mmInStream.read(mmBuffer);
-                //TODO:라즈베리로부터 받아온 데이터 서버에 전송하기.
                 for(int i=0;i<1024;i++) {
                     coords[i] = mmBuffer[i];
                 }
 
 
             }
-    }
+        }
 
-    // Call this from the main activity to send data to the remote device.
-    public void write(byte[] bytes) {
-        try {
-            //라즈베리파이에 입력하는 데이터
-            mmOutStream.write(bytes);
+        // Call this from the main activity to send data to the remote device.
+        public void write(byte[] bytes) {
+            try {
+                //라즈베리파이에 입력하는 데이터
+                mmOutStream.write(bytes);
 
-        } catch (IOException e) {
-            Log.e("TAG", "Error occurred when sending data", e);
+            } catch (IOException e) {
+                Log.e("TAG", "Error occurred when sending data", e);
+            }
+        }
+
+        // Call this method from the main activity to shut down the connection.
+        public void cancel() {
+            try {
+                mmSocket.close();
+            } catch (IOException e) {
+                Log.e("TAG", "Could not close the connect socket", e);
+            }
         }
     }
-
-    // Call this method from the main activity to shut down the connection.
-    public void cancel() {
-        try {
-            mmSocket.close();
-        } catch (IOException e) {
-            Log.e("TAG", "Could not close the connect socket", e);
-        }
-    }
-}
 
 
     ///////////////////////////////////SERVER///////////////////////////////////
@@ -380,7 +388,6 @@ public class MainActivity extends AppCompatActivity {
 
                 ObjectOutputStream outputStream = new ObjectOutputStream(socket.getOutputStream());
 //                float[] coords = new float[6]; //xyz 2
-                // TODO: coords 대신에 라즈베리파이에서 가져온 좌표 쓰기
                 for (int i = 0; i < 1024; i++) {
 
                     outputStream.writeByte(coords[i]); //라즈베리로부터 받아온 byte 그대로 넘김.
@@ -395,7 +402,6 @@ public class MainActivity extends AppCompatActivity {
 
                     recCoords[i] = inputStream.readFloat();
                 }
-                // TODO: 받아온 좌표 처리하기?
 
                 inputStream.close();
                 outputStream.close();
