@@ -120,7 +120,7 @@ public class MainActivity extends AppCompatActivity {
 //    final BluetoothDevice[] pairedDevices = devices.toArray(new BluetoothDevice[0]);
 
     private final BroadcastReceiver mBroadcastReceiver3 = new BroadcastReceiver() {
-        //블루투스 연결 상태에 따라 UI 변경 //TODO: 라즈베리파이와 연결되었을때 UI가 변경되도록 설정하기.
+        //블루투스 연결 상태에 따라 UI 변경
         @Override
         public void onReceive(Context context, Intent intent) {
             String action = intent.getAction();
@@ -248,6 +248,7 @@ public class MainActivity extends AppCompatActivity {
         unregisterReceiver(mBroadcastReceiver3);
     }
     ////////////////////////////////////블루투스 연결 소켓 생성하기 (CLIENT)//////////////////////////////////////
+
     private class ConnectTask extends AsyncTask<Void, Void, Boolean> {
 
         private BluetoothSocket mBluetoothSocket = null;
@@ -287,8 +288,7 @@ public class MainActivity extends AppCompatActivity {
                 try {
                     mBluetoothSocket.close();
                 } catch (IOException e2) {
-                    Log.e("TAG", "unable to close() " +
-                            " socket during connection failure", e2);
+                    Log.e("TAG", "unable to close() " + " socket during connection failure", e2);
                 }
 
                 return false;
@@ -379,6 +379,7 @@ public class MainActivity extends AppCompatActivity {
                             else
                             {
                                 readBuffer[readBufferPosition++] = b;
+                                coords[readBufferPosition++]=b;
                             }
                         }
                     }
