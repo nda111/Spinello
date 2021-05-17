@@ -1,2 +1,0 @@
-# Untitled
-Undergraduate thesis project

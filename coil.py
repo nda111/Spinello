@@ -1,4 +1,5 @@
-import numpy as np
+import torch
+import math
 from typing import List
 
 
@@ -8,7 +9,7 @@ class Coil:
     """
 
     @staticmethod
-    def calc_up_vector(latitude: float, longitude: float) -> np.ndarray:
+    def calc_up_vector(latitude: float, longitude: float) -> torch.FloatTensor:
         """
         Calculate the up-vector from latitude and longitude.
 
@@ -17,16 +18,16 @@ class Coil:
 
         :return: The up-vector.
         """
-        vertical_cos = np.cos(longitude)
-        return np.array((
-            vertical_cos * np.cos(latitude),
-            vertical_cos * np.sin(latitude),
-            np.sin(longitude)
+        vertical_cos = math.cos(longitude)
+        return torch.FloatTensor((
+            vertical_cos * math.cos(latitude),
+            vertical_cos * math.sin(latitude),
+            math.sin(longitude)
         ))
 
 
     @staticmethod
-    def calc_angles(up_vector: np.ndarray) -> List[float]:
+    def calc_angles(up_vector: torch.FloatTensor) -> List[float]:
         """
         Calculate the longtitude and latitude from up-vector.
 
@@ -34,17 +35,17 @@ class Coil:
 
         :return: A list: [longitude, latitude]
         """
-        up = up_vector / np.dot(up_vector, up_vector)
-        longitude = np.arcsin(up[2])
-        cos = np.sqrt(1 - up[2] * up[2])
-        latitude = np.arccos(up[0] / cos)
+        up = up_vector / torch.sqrt(torch.dot(up_vector, up_vector))
+        longitude = math.acos(up[2])
+        cos = math.sqrt(1 - up[2] * up[2])
+        latitude = math.acos(up[0] / cos)
         return [latitude, longitude]
 
     def __init__(self,
-                 area: np.float32,
-                 num_wind: np.int32,
-                 position: np.ndarray = np.zeros(3),
-                 up_vector: np.ndarray = np.array([0, 0, 1])):
+                 area: float,
+                 num_wind: int,
+                 position: torch.FloatTensor = torch.zeros(3),
+                 up_vector: torch.FloatTensor = torch.FloatTensor([0, 0, 1])):
         """
         Create a coil.
 
@@ -64,12 +65,12 @@ class Coil:
 
         :return: The clone object.
         """
-        return Coil(self.area, self.num_wind, self.position.__copy__(), self.up_vector.__copy__())
+        return Coil(self.area, self.num_wind, self.position, self.up_vector)
 
 
-def derive_current(first: Coil, second: Coil, delta_voltage: np.float32, delta_time: np.float32) -> np.float32:
+def derive_current(first: Coil, second: Coil, delta_voltage: float, delta_time: float) -> float:
     """
-    Drive electric field from the first-order coil to the second-order coil.
+    Drive electric field from the first-order coil to the second-order scoil.
 
     :param first: The first-order coil.
     :param second: The second-order coil.
@@ -84,14 +85,14 @@ def derive_current(first: Coil, second: Coil, delta_voltage: np.float32, delta_t
     dot_between = first.up_vector.dot(second.up_vector)
 
     # Calculate the sin value to reflect the angle.
-    cos = dot_between / np.emath.sqrt(first_norm_up * second_norm_up)
-    sin = np.emath.sqrt(1 - cos * cos)
+    cos = dot_between / torch.sqrt(first_norm_up * second_norm_up)
+    sin = torch.sqrt(1 - cos * cos)
 
     # Calculate the distance between two coils.
     dist_vector = first.position - second.position
     dist_squared = dist_vector.dot(dist_vector)
     if dist_squared == 0:
-        return np.float32(np.nan)
+        return float('nan')
 
     # Calculate the current of the first-order coil.
     flux = first.num_wind * first.area * delta_voltage

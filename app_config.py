@@ -19,5 +19,5 @@ PATH_LOG_DIR = './data/log'
 PATH_DATA = './data/data_set.pkl'
 PATH_MODEL = './data/model.pkl'
 
-PREF_SPACE_SIZE = 300
+PREF_SPACE_SIZE = 30
 PREF_NUM_DATA = 100000

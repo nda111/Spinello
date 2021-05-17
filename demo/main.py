@@ -5,8 +5,8 @@ import predictor
 from OpenGL.GL import *
 from OpenGL.GLU import *
 from OpenGL.GLUT import *
-import numpy as np
-from coil import Coil, derive_current
+import torch
+from coil import Coil
 from sklearn.neural_network import MLPRegressor
 
 vertices = ((0, 0, 0), (0, 0, 1), (1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0))
@@ -16,8 +16,8 @@ colors_rgb = (app_config.COLOR_FORE_X, app_config.COLOR_FORE_Y, app_config.COLOR
 colors_white = (app_config.COLOR_WHITE, app_config.COLOR_WHITE, app_config.COLOR_WHITE)
 colors_light_gray = (app_config.COLOR_LIGHT_GRAY, app_config.COLOR_LIGHT_GRAY, app_config.COLOR_LIGHT_GRAY)
 
-position = np.array((-2.5, 0, 0), dtype=np.float32)
-angle = np.array((0, 0), dtype=np.float32)
+position = torch.FloatTensor((-2.5, 0, 0))
+angle = torch.zeros(2, dtype=torch.float)
 
 used_keys = (
     b'w', b'a', b's', b'd', b'e', b'c',
@@ -53,8 +53,8 @@ def onKeyUp(key, _, __):
 
 
 def update(delta_time: float):
-    rotation = np.zeros(2, dtype=np.float32)
-    translation = np.zeros(3, dtype=np.float32)
+    rotation = torch.zeros(2, dtype=torch.float)
+    translation = torch.zeros(3, dtype=torch.float)
 
     rotation_delta = app_config.PREF_ROTATION_STEP * delta_time
     translation_delta = app_config.PREF_TRANSLATION_STEP * delta_time
@@ -100,10 +100,11 @@ def render():
     lookAt()
 
     # Predict position, angle
-    angle_r = np.radians(angle)
+    angle_r = torch.deg2rad(angle)
     up = Coil.calc_up_vector(angle_r[0], angle_r[1])
 
-    pred = predictor.DoubleModelPredictor()
+    # pred = predictor.DoubleModelPredictor()
+    pred = predictor.TorchPredictor()
     pred_pos, pred_up = pred.inference(position, up)
     pred_angle = Coil.calc_angles(pred_up)
 
