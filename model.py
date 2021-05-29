@@ -23,26 +23,22 @@ class PositionRegression:
     def __init__(self):
         self.model = nn.Sequential(
             nn.Linear(3, 32),
-            # nn.BatchNorm1d(32),
             nn.ReLU(),
 
             nn.Linear(32, 32),
-            # nn.BatchNorm1d(32),
             nn.ReLU(),
 
             nn.Linear(32, 32),
-            # nn.BatchNorm1d(32),
             nn.ReLU(),
 
             nn.Linear(32, 32),
-            # nn.BatchNorm1d(32),
             nn.ReLU(),
 
             nn.Linear(32, 32),
-            # nn.BatchNorm1d(32),
             nn.ReLU(),
 
             nn.Linear(32, 6),
+            nn.Sigmoid()
         )
 
     def init_model(self):
